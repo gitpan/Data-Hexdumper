@@ -1,7 +1,7 @@
 use strict; use warnings;
 my $loaded;
 
-BEGIN { $| = 1; print "1..8\n"; }
+BEGIN { $| = 1; print "1..9\n"; }
 END { print "not ok 1\n" unless $loaded; }
 
 use Data::Hexdumper;
@@ -17,6 +17,18 @@ print "not " unless("\n".hexdump(
 	end_position => 0x1F
 ) eq q{
   0x0000 : 20212223 24252627 28292A2B 2C2D2E2F             : .!"#$%&'()*+,-./
+  0x0010 : 30313233 34353637 38393A3B 3C3D3E3F             : 0123456789:;<=>?
+});
+print 'ok '.++$test."\n";
+
+print "not " unless("\n".hexdump(
+	data => join('', map { pack('C', $_) } (0x20 .. 0x3F)),
+	number_format => 'N',
+	start_position => 0,
+	end_position => 0x1F,
+	space_as_space => 1
+) eq q{
+  0x0000 : 20212223 24252627 28292A2B 2C2D2E2F             :  !"#$%&'()*+,-./
   0x0010 : 30313233 34353637 38393A3B 3C3D3E3F             : 0123456789:;<=>?
 });
 print 'ok '.++$test."\n";

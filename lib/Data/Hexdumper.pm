@@ -1,6 +1,6 @@
 package Data::Hexdumper;
 
-$VERSION = "1.1";
+$VERSION = "1.2";
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -31,13 +31,14 @@ Data::Hexdumper - A module for displaying binary data in a readable format
 
 =head1 SYNOPSIS
 
-use Data::Hexdumper;
-hexdump(
-    data => $data,          # what to dump
-    number_format => 'S',   # display as unsigned 'shorts'
-    start_position => 100,  # start at this offset ...
-    end_position => 148     # ... and end at this offset
-);
+    use Data::Hexdumper;
+    $results = hexdump(
+        data => $data,          # what to dump
+        number_format => 'S',   # display as unsigned 'shorts'
+        start_position => 100,  # start at this offset ...
+        end_position => 148     # ... and end at this offset
+    );
+    print $results;
 
 =head1 DESCRIPTION
 
@@ -92,6 +93,12 @@ compiler's notion of what a short might be is not supported at this time.
 Make this true if you want to suppress any warnings - such as that your
 data may have been padded with NULLs if it didn't exactly fit into an
 integer number of words, or if you do something that is deprecated.
+
+=item space_as_space
+
+Make this true if you want spaces (ASCII character 0x20) to be printed as
+spaces Otherwise, spaces will be printed as full stops / periods (ASCII
+0x2E).
 
 =back
 
@@ -176,7 +183,12 @@ sub hexdump {
 			$output.=$thisData;
 		}
 		# replace any non-printable character with .
-                $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/-]/./gi;
+		if($params{space_as_space}) {
+		    $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/ -]/./gi;
+                }
+                else {
+		    $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/-]/./gi;
+                }
 		# Yes, this 48 *is* a magic number.
 		$output.=' ' x (48-$lengthOfLine) .": $chunk\n";
 		$addr += CHUNKSIZE;
