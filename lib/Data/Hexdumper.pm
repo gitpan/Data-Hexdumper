@@ -1,12 +1,13 @@
 package Data::Hexdumper;
 
-$VERSION = "1.0.1";
+$VERSION = "1.1";
 
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(hexdump Hexdump); # export Hexdump for bacwkard combatibility
 
 use strict;
+use warnings;
 
 # this is a magic number
 use constant CHUNKSIZE => 16;
@@ -110,7 +111,7 @@ sub VERSION {
 
 sub Hexdump {
 	my %params = @_;
-	print STDERR "Data::Hexdumper::Hexdump() is deprecated.\n".
+	warn "Data::Hexdumper::Hexdump() is deprecated.\n".
 		     "please use Data::Hexdumper::hexdump() instead.\n".
 		     "note the lower-case h.\n"
 		unless($params{suppress_warnings});
@@ -141,7 +142,7 @@ sub hexdump {
 
 	$data=substr($data, $start_position, 1+$end_position-$start_position);
 	if(length($data)/$num_bytes != int(length($data)/$num_bytes)) {
-		print STDERR "data doesn't exactly fit into an integer number ".
+		warn "data doesn't exactly fit into an integer number ".
 			     "of '$number_format' words, so has been\npadded ".
 			     "with NULLs at the end.\n"
 			unless($params{suppress_warnings});
@@ -150,11 +151,11 @@ sub hexdump {
 
 	my $output=''; # where we put the formatted results
 
-	while(length($data)) {
+	while($data) {
 		# Get a chunk
 		my $chunk = substr($data, 0, CHUNKSIZE);
-		$data = substr($data, CHUNKSIZE);
-
+		$data = ($chunk eq $data) ? '' : substr($data, CHUNKSIZE);
+		
 		$output.=sprintf('  0x%04X : ', $addr);
 
 		# have to keep chunk for printing, so make a copy we
@@ -174,8 +175,8 @@ sub hexdump {
 			$lengthOfLine+=length($thisData);
 			$output.=$thisData;
 		}
-		# $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"£\$%^&*()_+=~?\/-]/./gi;
-		$chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/-]/./gi;
+		# replace any non-printable character with .
+                $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/-]/./gi;
 		# Yes, this 48 *is* a magic number.
 		$output.=' ' x (48-$lengthOfLine) .": $chunk\n";
 		$addr += CHUNKSIZE;
@@ -220,6 +221,10 @@ The lack of bug reports convinced me that 0.01 was ready for release, so I
 bumped it up to 1.00 (which was never released) then remembered to fix the
 documented bug where you tried to dump data whose length wasn't an integer
 multiple of your word length.
+
+=item Version 1.1
+
+Fixed bug where it emitted extra warnings in some places.
 
 =cut
 

@@ -2,5 +2,5 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
 		NAME	=> 'Data::Hexdumper',
-		VERSION => '0.01'
+		VERSION => '1.1'
 	     );
