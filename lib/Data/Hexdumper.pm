@@ -1,23 +1,37 @@
 package Data::Hexdumper;
 
-$VERSION = "0.01";
+$VERSION = "1.0.1";
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(Hexdump);
+@EXPORT = qw(hexdump Hexdump); # export Hexdump for bacwkard combatibility
 
 use strict;
+
+# this is a magic number
+use constant CHUNKSIZE => 16;
+
+# static data, tells us the length of each type of word
+my %num_bytes=(
+	C => 1, # unsigned char
+	S => 2, # unsigned short      (shorts are ALWAYS 16-bit)
+	n => 2, # big-endian short
+	v => 2, # little-endian short
+	L => 4, # unsigned long       (longs are ALWAYS 32-bit)
+	N => 4, # big-endian long
+	V => 4, # little-endian long
+);
 
 =pod
 
 =head1 NAME
 
-Hexdumper - A module for displaying binary data in a readable format
+Data::Hexdumper - A module for displaying binary data in a readable format
 
 =head1 SYNOPSIS
 
 use Data::Hexdumper;
-Data::Hexdumper::dump(
+hexdump(
     data => $data,          # what to dump
     number_format => 'S',   # display as unsigned 'shorts'
     start_position => 100,  # start at this offset ...
@@ -33,11 +47,11 @@ data is formatted, with sensible defaults.  It is envisaged that it will
 primarily be of use for those wrestling alligators in the swamp of binary
 file formats, which is why it was written in the first place.
 
-C<Data::Hexdumper> provides the following subroutine:
+C<Data::Hexdumper> provides the following subroutines:
 
 =over 4
 
-=item Hexdump
+=item hexdump
 
 Does everything :-)  Takes a hash of parameters, one of which is mandatory,
 the rest having sensible defaults if not specified.  Available parameters
@@ -68,6 +82,26 @@ and whether they are big- or little-endian.  The permissible values are
 C<C>, C<S>, C<n>, C<v>, C<L>, C<N>, and C<V>, having exactly the same
 meanings as they do in C<unpack>.  It defaults to 'C'.
 
+Note that 'short' and 'long' are always 16- and 32-bit respectively,
+regardless of what your C compiler thinks.  Syntax like 'S!' to get your
+compiler's notion of what a short might be is not supported at this time.
+
+=item suppress_warnings
+
+Make this true if you want to suppress any warnings - such as that your
+data may have been padded with NULLs if it didn't exactly fit into an
+integer number of words, or if you do something that is deprecated.
+
+=back
+
+=item Hexdump
+
+This subroutine is deprecated and you are encouraged to use hexdump
+instead (note different capitalisation as that is more consistent with
+the perl idiom).  It is functionally identical to hexdump() with the
+exception that it will generate a warning when used unless you pass
+the suppress_warnings flag.
+
 =cut
 
 sub VERSION {
@@ -75,22 +109,21 @@ sub VERSION {
 }
 
 sub Hexdump {
-	my %params=@_;
-	my %num_bytes=(
-		C => 1, # unsigned char
-		S => 2, # unsigned short
-		n => 2, # big-endian short
-		v => 2, # little-endian short
-		L => 4, # unsigned long
-		N => 4, # big-endian long
-		V => 4, # little-endian long
-	);
-	my $output='';
+	my %params = @_;
+	print STDERR "Data::Hexdumper::Hexdump() is deprecated.\n".
+		     "please use Data::Hexdumper::hexdump() instead.\n".
+		     "note the lower-case h.\n"
+		unless($params{suppress_warnings});
+	return hexdump(@_); } # for backwards combatibility
 
+sub hexdump {
+	my %params=@_;
 	my($data, $number_format, $start_position, $end_position)=
 		@params{qw(data number_format start_position end_position)};
 
-	die("No data given to Hexdump.") unless $data;
+	# sanity-check the parameters
+
+	die("No data given to hexdump.") unless $data;
 
 	my $addr = $start_position ||= 0;
 	die("start_position must be numeric.") if($start_position=~/\D/);
@@ -101,15 +134,26 @@ sub Hexdump {
 
 	$end_position ||= length($data)-1;
 	die("end_position must be numeric.") if($end_position=~/\D/);
+	die("end_position must be after start position.")
+		if($end_position <= $start_position);
 
-	$data=substr($data, $start_position, $end_position-$start_position);
+	# extract the required range and pad end with NULLs if necessary
+
+	$data=substr($data, $start_position, 1+$end_position-$start_position);
+	if(length($data)/$num_bytes != int(length($data)/$num_bytes)) {
+		print STDERR "data doesn't exactly fit into an integer number ".
+			     "of '$number_format' words, so has been\npadded ".
+			     "with NULLs at the end.\n"
+			unless($params{suppress_warnings});
+		$data .= pack('C', 0) x ($num_bytes - length($data) + int(length($data)/$num_bytes)*$num_bytes);
+	}
+
+	my $output=''; # where we put the formatted results
 
 	while(length($data)) {
-		# Get a chunk of 16 bytes
-		my $chunk=substr($data,0,16);
-		# Remove 'em from data
-		if(length($data)>16) { $data=substr($data,16); }
-		 else { $data=''; }
+		# Get a chunk
+		my $chunk = substr($data, 0, CHUNKSIZE);
+		$data = substr($data, CHUNKSIZE);
 
 		$output.=sprintf('  0x%04X : ', $addr);
 
@@ -130,9 +174,11 @@ sub Hexdump {
 			$lengthOfLine+=length($thisData);
 			$output.=$thisData;
 		}
-		$chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"£\$%^&*()_+=~?\/-]/./gi;
+		# $chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"£\$%^&*()_+=~?\/-]/./gi;
+		$chunk=~s/[^a-z0-9\\|,.<>;:'\@[{\]}#`!"\$%^&*()_+=~?\/-]/./gi;
+		# Yes, this 48 *is* a magic number.
 		$output.=' ' x (48-$lengthOfLine) .": $chunk\n";
-		$addr+=16;
+		$addr += CHUNKSIZE;
 	}
 	$output;
 }
@@ -149,9 +195,14 @@ perldoc -f pack
 
 =head1 BUGS
 
-If displaying data in 'short' or 'long' formats, the last element
-displayed may be screwed up if it does not end on the boundary of
-a short or a long - eg, if you try to display 39 bytes as longs.
+There is no support for syntax like 'S!' like what pack() has, so it's
+not possible to tell it to use your environment's native word-lengths
+are, only 16- and 32-bit shorts and longs are supported.
+
+It formats the data for an 80 column screen, perhaps this should be a
+frobbable parameter.
+
+Formatting may break if the end position has an address greater than 65535.
 
 =head1 AUTHOR
 
@@ -162,6 +213,13 @@ David Cantrell (david@cantrell.org.uk).
 =item Version 0.01 
 
 Original version.
+
+=item Version 1.01
+
+The lack of bug reports convinced me that 0.01 was ready for release, so I
+bumped it up to 1.00 (which was never released) then remembered to fix the
+documented bug where you tried to dump data whose length wasn't an integer
+multiple of your word length.
 
 =cut
 
