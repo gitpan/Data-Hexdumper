@@ -1,0 +1,47 @@
+==============================================================================
+                  Release of version 0.01 of Data::Hexdumper
+==============================================================================
+
+NAME
+    Data::Hexdumper - 
+
+SYNOPSIS
+
+    in user's code:
+
+	     use Data::Hexdumper;
+
+	     print Hexdump(
+	       data => $data,            # a blob of binary data
+	       number_format => 'v',     # the format to use
+	       start_position => 100000, # starting offset in file
+	       end_position => 100511    # ending offset
+	     );
+
+INSTALLATION
+
+    Do the usual:
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+DESCRIPTION
+
+    If you've ever needed to work with binary data files - in particular
+    nasty files whose documentation is largely a work of fiction, then
+    you will appreciate the need for a tool to help make sense of the
+    structure.  There is already a Data::HexDump module (by Fabien Tassin,
+    fta@oleane.net) which you should use if your needs are simple.
+    However, Data::Hexdumper gives you a lot more options, to control
+    things like whether to dump in bytes, shorts or longs, and in little-
+    endian or big-endian order.
+
+AUTHOR
+    David Cantrell (david@cantrell.org.uk)
+
+COPYRIGHT
+    Copyright (c) 2001, David Cantrell. All Rights Reserved. This module
+    is free software. It may be used, redistributed and/or modified under
+    the terms of the Perl Artistic License
+    (see http://www.perl.com/perl/misc/Artistic.html)
