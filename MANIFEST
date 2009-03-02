@@ -3,7 +3,10 @@ MANIFEST
 Makefile.PL
 README
 lib/Data/Hexdumper.pm
-t/all.t
+t/regression.t
+t/64.t
 t/pod-coverage.t
 t/pod.t
+ARTISTIC.txt
+GPL2.txt
 META.yml                                 Module meta-data (added by MakeMaker)
